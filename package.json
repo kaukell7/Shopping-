@@ -1,0 +1,13 @@
+{
+  "name": "spider-io-shop",
+  "version": "1.0.0",
+  "description": "Spider.io Digital Shop Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "path": "^0.12.7"
+  }
+}
