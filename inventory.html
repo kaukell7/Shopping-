@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider.io - Inventory System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4f46e5; --bg: #f8fafc; --text: #1e293b; --white: #ffffff; --border: #e2e8f0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        
+        .grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        .card { background: var(--white); padding: 20px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        /* Form Styles */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        
+        /* Banner Styles */
+        .banner-box { border: 2px dashed var(--border); padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 15px; cursor: pointer; }
+        .banner-preview-list { display: flex; gap: 10px; overflow-x: auto; margin-top: 10px; }
+        .banner-img { width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+
+        /* Table Styles */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+        th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 13px; color: #64748b; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+        .prod-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Spider.io Inventory</h1>
+        <button onclick="location.reload()" style="padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); cursor:pointer;">Refresh</button>
+    </div>
+
+    <div class="grid">
+        <!-- ဘယ်ဘက်ခြမ်း: ပစ္စည်းတင်ရန် နှင့် Banner တင်ရန် -->
+        <div>
+            <div class="card" style="margin-bottom: 20px;">
+                <h3><i class="fas fa-image"></i> Shop Banners</h3>
+                <div class="banner-box" onclick="document.getElementById('bInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i><br>Upload Banner
+                </div>
+                <input type="file" id="bInput" hidden accept="image/*" onchange="uploadFile(this, 'banners')">
+                <div class="banner-preview-list" id="bannerList"></div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-plus"></i> Add Product</h3>
+                <form id="pForm">
+                    <div class="form-group">
+                        <label>Image</label>
+                        <input type="file" id="pImg" accept="image/*" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="pName" placeholder="Product Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Price (Ks)</label>
+                        <input type="number" id="pPrice" placeholder="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Discount (%)</label>
+                        <input type="number" id="pDisc" value="0">
+                    </div>
+                    <button type="submit" class="btn" id="saveBtn">Save Product</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ညာဘက်ခြမ်း: ပစ္စည်းစာရင်း ပြရန် -->
+        <div class="card">
+            <h3>Product List</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="pTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // မင်းရဲ့ .env ထဲက Key တွေကို ဒီမှာ ထည့်ပေးပါ
+    const S_URL = 'YOUR_SUPABASE_URL';
+    const S_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const _supabase = supabase.createClient(S_URL, S_KEY);
+
+    const agent = "spider"; // agent name ကို ဒီမှာ သတ်မှတ်ပါ
+
+    // ပစ္စည်းစာရင်း ယူခြင်း
+    async function loadData() {
+        const { data: prods } = await _supabase.from('products').select('*').eq('agent_name', agent);
+        const { data: banners } = await _supabase.from('banners').select('*').eq('agent_name', agent);
+
+        document.getElementById('pTable').innerHTML = prods?.map(p => `
+            <tr>
+                <td><img src="${p.image_url}" class="prod-img"></td>
+                <td>${p.name}</td>
+                <td>${p.price} Ks</td>
+                <td><button onclick="deleteData('${p.id}', 'products')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `).join('') || '';
+
+        document.getElementById('bannerList').innerHTML = banners?.map(b => `
+            <img src="${b.image_url}" class="banner-img" onclick="deleteData('${b.id}', 'banners')">
+        `).join('') || '';
+    }
+
+    // ပစ္စည်းအသစ်သိမ်းခြင်း
+    document.getElementById('pForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+
+        const file = document.getElementById('pImg').files[0];
+        const path = `products/${Date.now()}_${file.name}`;
+        
+        await _supabase.storage.from('product-images').upload(path, file);
+        const { data: url } = _supabase.storage.from('product-images').getPublicUrl(path);
+
+        const price = parseInt(document.getElementById('pPrice').value);
+        const disc = parseInt(document.getElementById('pDisc').value);
+        const finalPrice = price - (price * disc / 100);
+
+        await _supabase.from('products').insert([{
+            name: document.getElementById('pName').value,
+            price: finalPrice,
+            image_url: url.publicUrl,
+            agent_name: agent
+        }]);
+
+        location.reload();
+    };
+
+    // Banner တင်ခြင်း
+    async function uploadFile(input, type) {
+        const file = input.files[0];
+        const path = `banners/${Date.now()}_${file.name}`;
+        await _supabase.storage.from('banners').upload(path, file);
+        const { data: url } = _supabase.storage.from('banners').getPublicUrl(path);
+
+        await _supabase.from('banners').insert([{ image_url: url.publicUrl, agent_name: agent }]);
+        location.reload();
+    }
+
+    // ဖျက်ခြင်း
+    async function deleteData(id, table) {
+        if(confirm("ဖျက်မှာ သေချာလား?")) {
+            await _supabase.from(table).delete().eq('id', id);
+            loadData();
+        }
+    }
+
+    loadData();
+</script>
+</body>
+</html>
